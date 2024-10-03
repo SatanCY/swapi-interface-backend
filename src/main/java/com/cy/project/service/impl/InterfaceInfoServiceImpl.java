@@ -24,14 +24,14 @@ public class InterfaceInfoServiceImpl extends ServiceImpl<InterfaceInfoMapper, I
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String name = interfaceInfo.getName();
-        String description = interfaceInfo.getDescription();
+//        String description = interfaceInfo.getDescription();
         String url = interfaceInfo.getUrl();
-        String requestHeader = interfaceInfo.getRequestHeader();
-        String responseHeader = interfaceInfo.getResponseHeader();
+//        String requestHeader = interfaceInfo.getRequestHeader();
+//        String responseHeader = interfaceInfo.getResponseHeader();
         String method = interfaceInfo.getMethod();
         // 创建时，所有参数必须非空
         if (add) {
-            if (StringUtils.isAnyBlank(name, description, url, requestHeader, responseHeader, method)) {
+            if (StringUtils.isAnyBlank(name, url, method)) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR);
             }
         }

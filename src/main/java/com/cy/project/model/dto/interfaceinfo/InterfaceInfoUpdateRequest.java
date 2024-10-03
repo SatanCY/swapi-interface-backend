@@ -33,6 +33,11 @@ public class InterfaceInfoUpdateRequest implements Serializable {
     private String url;
 
     /**
+     * 请求参数
+     */
+    private String requestParams;
+
+    /**
      * 请求头
      */
     private String requestHeader;
@@ -51,4 +56,6 @@ public class InterfaceInfoUpdateRequest implements Serializable {
      * 请求类型
      */
     private String method;
+
+    private static final long serialVersion = 1L;
 }

@@ -3,19 +3,20 @@ package com.cy.project.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cy.project.annotation.AuthCheck;
-import com.cy.project.common.BaseResponse;
-import com.cy.project.common.DeleteRequest;
-import com.cy.project.common.ErrorCode;
-import com.cy.project.common.ResultUtils;
+import com.cy.project.common.*;
 import com.cy.project.constant.CommonConstant;
 import com.cy.project.exception.BusinessException;
 import com.cy.project.model.dto.interfaceinfo.InterfaceInfoAddRequest;
+import com.cy.project.model.dto.interfaceinfo.InterfaceInfoInvokeRequest;
 import com.cy.project.model.dto.interfaceinfo.InterfaceInfoQueryRequest;
 import com.cy.project.model.dto.interfaceinfo.InterfaceInfoUpdateRequest;
 import com.cy.project.model.entity.InterfaceInfo;
 import com.cy.project.model.entity.User;
+import com.cy.project.model.enums.InterfaceInfoStatusEnum;
 import com.cy.project.service.InterfaceInfoService;
 import com.cy.project.service.UserService;
+import com.google.gson.Gson;
+import com.sw.swapiclientsdk.client.SwApiClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -40,6 +41,9 @@ public class InterfaceInfoController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SwApiClient swApiClient;
 
     // region 增删改查
 
@@ -124,6 +128,100 @@ public class InterfaceInfoController {
         if (!oldInterfaceInfo.getUserId().equals(user.getId()) && !userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
+        boolean result = interfaceInfoService.updateById(interfaceInfo);
+        return ResultUtils.success(result);
+    }
+    /**
+     * 更新
+     *
+     * @param interfaceInfoInvokeRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/invoke")
+    public BaseResponse<Object> updateInterfaceInfo(@RequestBody InterfaceInfoInvokeRequest interfaceInfoInvokeRequest,
+                                                     HttpServletRequest request) {
+        if (interfaceInfoInvokeRequest == null || interfaceInfoInvokeRequest.getId() <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // 参数校验
+        long id = interfaceInfoInvokeRequest.getId();
+        String userRequestParams = interfaceInfoInvokeRequest.getUserRequestParams();
+        // 判断是否存在
+        InterfaceInfo oldInterfaceInfo = interfaceInfoService.getById(id);
+        if (oldInterfaceInfo == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
+        // 判断接口是否可用
+        User loginUser = userService.getLoginUser(request);
+        String accessKey = loginUser.getAccessKey();
+        String secretKey = loginUser.getSecretKey();
+        SwApiClient apiClient = new SwApiClient(accessKey, secretKey);
+        Gson gson = new Gson();
+        com.sw.swapiclientsdk.model.User user = gson.fromJson(userRequestParams, com.sw.swapiclientsdk.model.User.class);
+        String nameByPost = apiClient.getNameByRestful(user);
+        return ResultUtils.success(nameByPost);
+    }
+
+
+    /**
+     * 发布接口
+     *
+     * @param idRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/online")
+    @AuthCheck(mustRole = "admin")
+    public BaseResponse<Boolean> onlineInterfaceInfo(@RequestBody IdRequest idRequest, HttpServletRequest request) {
+        if (idRequest == null || idRequest.getId() <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // 参数校验
+        long id = idRequest.getId();
+        // 判断是否存在
+        InterfaceInfo oldInterfaceInfo = interfaceInfoService.getById(id);
+        if (oldInterfaceInfo == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
+       // 判断接口是否可用
+        com.sw.swapiclientsdk.model.User user = new com.sw.swapiclientsdk.model.User();
+        user.setName("林黎");
+        String nameByRestful = swApiClient.getNameByRestful(user);
+        if (StringUtils.isBlank(nameByRestful)) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"当前接口无法调用");
+        }
+        InterfaceInfo interfaceInfo = new InterfaceInfo();
+        interfaceInfo.setId(id);
+        interfaceInfo.setStatus(InterfaceInfoStatusEnum.ONLINE.getValue());
+        boolean result = interfaceInfoService.updateById(interfaceInfo);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 下线接口
+     *
+     * @param idRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/offline")
+    @AuthCheck(mustRole = "admin")
+    public BaseResponse<Boolean> offlineInterfaceInfo(@RequestBody IdRequest idRequest,
+                                                     HttpServletRequest request) {
+        if (idRequest == null || idRequest.getId() <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // 参数校验
+        long id = idRequest.getId();
+        // 判断是否存在
+        InterfaceInfo oldInterfaceInfo = interfaceInfoService.getById(id);
+        if (oldInterfaceInfo == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
+        InterfaceInfo interfaceInfo = new InterfaceInfo();
+        interfaceInfo.setId(id);
+        interfaceInfo.setStatus(InterfaceInfoStatusEnum.OFFLINE.getValue());
         boolean result = interfaceInfoService.updateById(interfaceInfo);
         return ResultUtils.success(result);
     }
